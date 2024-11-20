@@ -1,17 +1,40 @@
 import socket
 import time
+import pandas as pd
 from keras.models import load_model
 
 # Load the saved model
-model = load_model("E:\\BCI\\final67.h5")
+try:
+    model = load_model("D:\\Nishith\\Python\\try.h5")
+    print("Model loaded successfully.")
+except Exception as e:
+    print(f"Error loading model: {e}")
 
-# Make predictions on the test set
-y_pred_probs = model.predict(X_test)  
-y_pred = (y_pred_probs > 0.5).astype(int)  # Thresholding the probabilities to 0 or 1
+# Load the test data from CSV
+try:
+    X_test = pd.read_csv("E:\\BCI\\X_test.csv")
+    print("Test data loaded successfully.")
+    print("Test data shape:", X_test.shape)
+except Exception as e:
+    print(f"Error loading test data: {e}")
 
-# Map the predicted labels back to 'left' or 'right'
-inverse_label_mapping = {0: 'left', 1: 'right'}
-y_pred_labels = [inverse_label_mapping[pred] for pred in y_pred.flatten()]
+# Ensure the data matches the model's input format (e.g., normalization, reshaping)
+try:
+    # Example preprocessing (adjust as needed)
+    # X_test = X_test / 255.0  # Normalize if needed
+    y_pred_probs = model.predict(X_test)
+    print("Predictions made successfully.")
+except Exception as e:
+    print(f"Error during prediction: {e}")
+
+# Threshold and map predictions to commands
+try:
+    y_pred = (y_pred_probs > 0.5).astype(int)
+    inverse_label_mapping = {0: 'left', 1: 'right'}
+    y_pred_labels = [inverse_label_mapping[pred] for pred in y_pred.flatten()]
+    print("Predicted labels:", y_pred_labels[:10])  # Print first 10 labels for verification
+except Exception as e:
+    print(f"Error mapping predictions: {e}")
 
 # Send prediction results to Unity
 SERVER_ADDRESS = 'localhost'  # IP address of the Unity server
@@ -29,11 +52,11 @@ def send_command(command):
         print(f"An error occurred: {e}")
 
 if __name__ == "__main__":
-    # Send predictions (left or right) to Unity sequentially
-    for i in range(10):  # Sending the first 10 predictions
-        print(f"Sending command to Unity: {y_pred_labels[i]}")
-        send_command(y_pred_labels[i])
-        time.sleep(2)  # Wait for a few seconds before sending the next prediction
-
-    # Optional: Send a stop or reset command if needed after the predictions
-    send_command("stop")  # This can be a custom command in Unity for stopping or resetting the car
+    try:
+        for i in range(min(10, len(y_pred_labels))):  # Ensure we don't exceed available predictions
+            print(f"Sending command to Unity: {y_pred_labels[i]}")
+            send_command(y_pred_labels[i])
+            time.sleep(2)  # Wait before sending the next command
+        send_command("stop")
+    except Exception as e:
+        print(f"Error in sending commands: {e}")
